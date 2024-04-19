@@ -1,6 +1,7 @@
 package com.api.parkingcontrol.controllers;
 
 import com.api.parkingcontrol.dtos.ParkingSpotDTO;
+import com.api.parkingcontrol.exception.ParkingSpotConflictException;
 import com.api.parkingcontrol.models.ParkingSpot;
 import com.api.parkingcontrol.services.ParkingSpotService;
 import jakarta.validation.Valid;
@@ -32,19 +33,18 @@ public class ParkingSpotController {
 
     @PostMapping
     public ResponseEntity<Object> saveParkingSpot(@RequestBody @Valid ParkingSpotDTO parkingSpotDTO) {
-        if(parkingSpotService.existsByLicensePlateCar(parkingSpotDTO.getLicensePlateCar())){
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Conflito: Está placa de carro já está registrada no sistema");
+        try {
+            parkingSpotService.validateParkingSpot(parkingSpotDTO);
+            ParkingSpot parkingSpotModel = new ParkingSpot();
+            BeanUtils.copyProperties(parkingSpotDTO, parkingSpotModel);
+            parkingSpotModel.setRegistrationDate(LocalDateTime.now(ZoneId.of("UTC")));
+
+            ParkingSpot savedParkingSpot = parkingSpotService.save(parkingSpotModel);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedParkingSpot);
+        } catch (ParkingSpotConflictException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
         }
-        if(parkingSpotService.existsByParkingSpotNumber(parkingSpotDTO.getParkingSpotNumber())){
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Conflito: Este número de vaga já está registrada no sistema");
-        }
-        if(parkingSpotService.existsByApartmentAndBlock(parkingSpotDTO.getApartment(), parkingSpotDTO.getBlock())){
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Conflito: Este apartamento/bloco já está registrado no sistema");
-        }
-        var parkingSpotModel = new ParkingSpot();
-        BeanUtils.copyProperties(parkingSpotDTO, parkingSpotModel);
-        parkingSpotModel.setRegistrationDate(LocalDateTime.now(ZoneId.of("UTC")));
-        return ResponseEntity.status(HttpStatus.CREATED).body(parkingSpotService.save(parkingSpotModel));
     }
 
     @GetMapping

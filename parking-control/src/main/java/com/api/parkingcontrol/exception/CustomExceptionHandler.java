@@ -20,4 +20,9 @@ public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Erro interno do servidor."));
     }
+
+    @ExceptionHandler({LicensePlateCarConflictException.class, ParkingSpotNumberConflictException.class, ApartmentBlockConflictException.class})
+    public ResponseEntity<Object> handleConflictException(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+    }
 }
